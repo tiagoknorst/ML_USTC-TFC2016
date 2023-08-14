@@ -33,77 +33,61 @@ import matplotlib.pyplot as plt # biblioteca para visualização de informaçõe
 import seaborn as sns           # biblioteca para visualização de informações
 import numpy as np              # biblioteca para operações com arrays multidimensionais
 import ipaddress                # biblioteca para converter string IP para inteiro
+import glob                     # biblioteca para acessar arquivos facilmente
 from sklearn.neighbors import KNeighborsClassifier # biblioteca para treinar KNN
 sns.set()
 
 
-#data = pd.read_csv("Benign/BitTorrent_TCP.csv")
-data = pd.read_csv("Benign/BitTorrent_TCP.csv", index_col=0,
-                                                dtype={'Address A':str,
-                                                       'Port A':int,
-                                                       'Address B':str,
-                                                       'Port B':int,
-                                                       'Packets':int,
-                                                       'Bytes':int,
-                                                       'Packets A → B':int,
-                                                       'Bytes A → B':int,
-                                                       'Packets B → A':int,
-                                                       'Bytes B → A':int,
-                                                       'Rel Start':float,
-                                                       'Duration':float,
-                                                       'Bits/s A → B':float,
-                                                       'Bits/s B → A':float},)
-                                                       #colnames=['TIME', 'X', 'Y', 'Z'] )
+columns=["Address A","Port A","Address B","Port B","Packets","Bytes","Packets A → B","Bytes A → B","Packets B → A","Bytes B → A","Rel Start","Duration","Bits/s A → B","Bits/s B → A"]
+data = pd.DataFrame(columns=columns)
+
+for path in glob.glob("*/"):
+    for file in glob.glob(path+"*_TCP.csv"):
+        data2 = pd.read_csv(file, #index_col=0,
+                                                 dtype={'Address A':str,
+                                                        'Port A':int,
+                                                        'Address B':str,
+                                                        'Port B':int,
+                                                        'Packets':int,
+                                                        'Bytes':int,
+                                                        'Packets A → B':int,
+                                                        'Bytes A → B':int,
+                                                        'Packets B → A':int,
+                                                        'Bytes B → A':int,
+                                                        'Rel Start':float,
+                                                        'Duration':float,
+                                                        'Bits/s A → B':float,
+                                                        'Bits/s B → A':float},)
+    
+        if(path=='Malware/'):
+            data2.insert(data2.shape[1], "Malware", np.ones(data2.shape[0]))
+        else:
+            data2.insert(data2.shape[1], "Malware", np.zeros(data2.shape[0]))
+
+        print(data2.head())  # para visualizar apenas as 5 primeiras linhas
+        print(data2.tail())  # para visualizar apenas as 5 ultimas linhas
+
+        ## Características gerais do dataset
+        print("O conjunto de dados "+file+" possui {} linhas e {} colunas".format(data2.shape[0], data2.shape[1]))
+
+        data = pd.concat([data,data2.iloc[1:]])
+        #data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
+        #print(data.head())
+        #print(data.iloc[7516:])
+        #print(data.tail())
 
 
-
-
-#data = data.drop(columns=['Benchmark', 'Clocks'])
-print(data.head())  # para visualizar apenas as 5 primeiras linhas
-
-data.insert(data.shape[1], "Malware", np.zeros(data.shape[0]))
-print(data.head())
-
-## Características gerais do dataset
-print("O conjunto de dados Benign possui {} linhas e {} colunas".format(data.shape[0], data.shape[1]))
-
-
-data2 = pd.read_csv("Malware/Virut_TCP.csv", index_col=0,
-                                             dtype={'Address A':str,
-                                                    'Port A':int,
-                                                    'Address B':str,
-                                                    'Port B':int,
-                                                    'Packets':int,
-                                                    'Bytes':int,
-                                                    'Packets A → B':int,
-                                                    'Bytes A → B':int,
-                                                    'Packets B → A':int,
-                                                    'Bytes B → A':int,
-                                                    'Rel Start':float,
-                                                    'Duration':float,
-                                                    'Bits/s A → B':float,
-                                                    'Bits/s B → A':float},)
-print(data2.head())  # para visualizar apenas as 5 primeiras linhas
-
-data2.insert(data2.shape[1], "Malware", np.ones(data2.shape[0]))
-print(data2.head())
-print(data2.tail())
-
-## Características gerais do dataset
-print("O conjunto de dados Malware possui {} linhas e {} colunas".format(data2.shape[0], data2.shape[1]))
-
-
-data = pd.concat([data,data2.iloc[1:]])
 data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
-#print(data.head())
-#print(data.iloc[7516:])
-#print(data.tail())
+data = data.drop(columns=['index'])
 
 ## Características gerais do dataset
 print("O conjunto de dados completo possui {} linhas e {} colunas".format(data.shape[0], data.shape[1]))
 
 
 data.columns = data.columns.str.replace(' ', '') # elimina espaçamentos nos nomes dos atributos
+
+print(data.head())
+print(data.tail())
 
 #data.AddressA=int(ipaddress.ip_address(data.AddressA))
 for i in (range(data.shape[0])):
