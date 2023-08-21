@@ -32,13 +32,121 @@ Nessa seção, vamos usar essas funções para carregar o dataset [Breast Cancer
 O código abaixo carrega o dataset utilizando as funções do scikit-learn e mostra algumas informações básicas sobre os dados
 """
 
-from sklearn.datasets import load_breast_cancer
+import pandas as pd             # biblioteca para análise de dados
+import matplotlib.pyplot as plt # biblioteca para visualização de informações
+import seaborn as sns           # biblioteca para visualização de informações
+import numpy as np              # biblioteca para operações com arrays multidimensionais
+import ipaddress                # biblioteca para converter string IP para inteiro
+import glob                     # biblioteca para acessar arquivos facilmente
+from sklearn.neighbors import KNeighborsClassifier # biblioteca para treinar KNN
+sns.set()
 
-data = load_breast_cancer()
-X = data.data  # matriz contendo os atributos
-y = data.target  # vetor contendo a classe (0 para maligno e 1 para benigno) de cada instância
-feature_names = data.feature_names  # nome de cada atributo
-target_names = data.target_names  # nome de cada classe
+columns=["Address A","Port A","Address B","Port B","Packets","Bytes","Packets A → B","Bytes A → B","Packets B → A","Bytes B → A","Rel Start","Duration","Bits/s A → B","Bits/s B → A"]
+data = pd.DataFrame(columns=columns)
+
+print(glob.glob("*/"))
+print(glob.glob("Benign/*"))
+print(glob.glob("Malware/*"))
+
+for path in glob.glob("*/"):
+    for file in glob.glob(path+"*_TCP.csv"):
+        temp = pd.read_csv(file, #index_col=0,
+                                 dtype={'Address A':str,
+                                        'Port A':int,
+                                        'Address B':str,
+                                        'Port B':int,
+                                        'Packets':int,
+                                        'Bytes':int,
+                                        'Packets A → B':int,
+                                        'Bytes A → B':int,
+                                        'Packets B → A':int,
+                                        'Bytes B → A':int,
+                                        'Rel Start':float,
+                                        'Duration':float,
+                                        'Bits/s A → B':float,
+                                        'Bits/s B → A':float},)
+    
+        if(path[0]=='M'): # Se esta na pasta Malware
+            temp.insert(temp.shape[1], "Malware", np.ones(temp.shape[0]))
+        else:
+            temp.insert(temp.shape[1], "Malware", np.zeros(temp.shape[0]))
+
+        #print(temp.head())  # para visualizar apenas as 5 primeiras linhas
+        #print(temp.tail())  # para visualizar apenas as 5 ultimas linhas
+
+        ## Características gerais do dataset
+        print("O conjunto de dados "+file+" possui {} linhas e {} colunas".format(temp.shape[0], temp.shape[1]))
+
+        data = pd.concat([data,temp.iloc[1:]])
+        #data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
+        #print(data.head())
+        #print(data.iloc[7516:])
+        #print(data.tail())
+
+
+data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
+data = data.drop(columns=['index'])
+
+## Características gerais do dataset
+print("O conjunto de dados completo possui {} linhas e {} colunas".format(data.shape[0], data.shape[1]))
+
+
+data.columns = data.columns.str.replace(' ', '') # elimina espaçamentos nos nomes dos atributos
+
+print(data.head())
+print(data.tail())
+
+#data.AddressA=int(ipaddress.ip_address(data.AddressA))
+for i in (range(data.shape[0])):
+    data.at[i, 'AddressA'] = int(ipaddress.ip_address(data.at[i, 'AddressA'])) # converte IP para inteiro
+    data.at[i, 'AddressB'] = int(ipaddress.ip_address(data.at[i, 'AddressB'])) # converte IP para inteiro
+    #print("AddressA i="+str(i)+" IP="+data.at[i, 'AddressA']+" int="+str(int(ipaddress.ip_address(data.at[i, 'AddressA'])))) 
+    #print("AddressB i="+str(i)+" IP="+data.at[i, 'AddressB']+" int="+str(int(ipaddress.ip_address(data.at[i, 'AddressB'])))) 
+
+
+
+"""A coluna *'diagnosis'* contém a classificação de cada amostra referente ao tipo de tumor, se maligno (M) ou benigno (B). Vamos avaliar como as instâncias estão distribuídas entre as classes presentes no dataset."""
+
+## Distribuição do atributo alvo, 'diagnosis'
+plt.hist(data['Malware'])
+plt.title("Distribuição do atributo alvo - Malware")
+plt.show()
+
+"""Podemos perceber que existem mais instâncias classificadas como 'Benigno' do que como 'Maligno'. Portanto, existe um certo **desbalanceamento entre as classes**. Não vamos entrar em detalhes nesta atividade do possível impacto deste desbalanceamento no desempenho do modelo e tampouco como mitigar seus efeitos. Discutiremos esse assunto mais adiante. Por enquanto, é importante sabermos que temos mais exemplos do tipo 'Benigno' nos dados de treinamento, e portanto, é provável que qualquer modelo treinado tenha mais facilidade de acertar exemplos desta classe.
+
+Vamos avaliar a distribuição de valores dos atributos preditivos. Faremos isto tanto através da sumarização da distribuição a partir do método `describe()`, como através da visualização dos histogramas para cada atributo utilizando o método `hist()`.
+"""
+
+data.drop(['Malware'],axis=1).describe()
+
+data.drop(['Malware'],axis=1).hist(bins=15, figsize=(20,18))
+plt.show()
+
+
+plt.figure(figsize=(15,15))
+sns.heatmap(data.corr(), annot=True, cmap="PuOr", annot_kws={"size": 9})
+plt.show()
+
+"""---
+
+
+### Criando conjuntos de treino e teste para avaliação de modelos
+
+Um dos princípios mais importantes no desenvolvimento de modelos de Aprendizado de Máquina é nunca avaliar um modelo com os mesmos dados nos quais ele foi treinado. Se cometermos este erro, teremos uma avaliação muito otimista, pois o modelo pode simplesmente decorar todos os dados analisados durante o treinamento e demonstrar excelente desempenho preditivo para estes dados - o que não necessariamente se repetirá ao ser aplicado a novos dados. Assim, a validação de modelos deve ser sempre feita com dados independentes.
+
+Em muitos casos, não temos um conjunto de treino e teste já definidos. Ou seja, recebemos um único conjunto de dados para o desenvolvimento do modelo. Desta forma, o método **Holdout** é uma estratégia simples e flexível para gerar conjuntos de dados independentes: um conjunto é usado para treinar o modelo e o outro para testar o modelo. É imprescindível que estes conjuntos de dados sejam disjuntos, isto é, não podem ter nenhuma instância em comum.
+
+Algumas proporções para a divisão dos dados em treino/teste são comumente adotadas na literatura, por exemplo, 80%/20% e 75%/25%.
+
+Para o Holdout, iremos utilizar o método `train_test_split()` da biblioteca [scikit-learn](https://scikit-learn.org/stable/), uma das bibliotecas de Aprendizado de Máquina mais conhecidas e utilizadas do Python. Leia a documentação do método [aqui](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html). O parâmetro *stratify* define que a divisão será feita seguindo a proporção de exemplos por classe determinada no vetor $y$ (rótulos).
+"""
+
+## Separa o dataset em duas variáveis: os atributos/entradas (X) e a classe/saída (y)
+X = data.iloc[:, :-1].values  # matriz contendo os atributos
+y = data.iloc[:, 14].values  # vetor contendo a classe (0 para maligno e 1 para benigno) de cada instância
+feature_names = columns #data.feature_names  # nome de cada atributo
+target_names = ["0.0", "1.0"]  # nome de cada classe
+
 
 print(f"Dimensões de X: {X.shape}\n")
 print(f"Dimensões de y: {y.shape}\n")
