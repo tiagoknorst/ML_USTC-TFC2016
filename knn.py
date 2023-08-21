@@ -37,40 +37,43 @@ import glob                     # biblioteca para acessar arquivos facilmente
 from sklearn.neighbors import KNeighborsClassifier # biblioteca para treinar KNN
 sns.set()
 
-
 columns=["Address A","Port A","Address B","Port B","Packets","Bytes","Packets A → B","Bytes A → B","Packets B → A","Bytes B → A","Rel Start","Duration","Bits/s A → B","Bits/s B → A"]
 data = pd.DataFrame(columns=columns)
 
+print(glob.glob("*/"))
+print(glob.glob("Benign/*"))
+print(glob.glob("Malware/*"))
+
 for path in glob.glob("*/"):
     for file in glob.glob(path+"*_TCP.csv"):
-        data2 = pd.read_csv(file, #index_col=0,
-                                                 dtype={'Address A':str,
-                                                        'Port A':int,
-                                                        'Address B':str,
-                                                        'Port B':int,
-                                                        'Packets':int,
-                                                        'Bytes':int,
-                                                        'Packets A → B':int,
-                                                        'Bytes A → B':int,
-                                                        'Packets B → A':int,
-                                                        'Bytes B → A':int,
-                                                        'Rel Start':float,
-                                                        'Duration':float,
-                                                        'Bits/s A → B':float,
-                                                        'Bits/s B → A':float},)
+        temp = pd.read_csv(file, #index_col=0,
+                                 dtype={'Address A':str,
+                                        'Port A':int,
+                                        'Address B':str,
+                                        'Port B':int,
+                                        'Packets':int,
+                                        'Bytes':int,
+                                        'Packets A → B':int,
+                                        'Bytes A → B':int,
+                                        'Packets B → A':int,
+                                        'Bytes B → A':int,
+                                        'Rel Start':float,
+                                        'Duration':float,
+                                        'Bits/s A → B':float,
+                                        'Bits/s B → A':float},)
     
-        if(path=='Malware/'):
-            data2.insert(data2.shape[1], "Malware", np.ones(data2.shape[0]))
+        if(path[0]=='M'): # Se esta na pasta Malware
+            temp.insert(temp.shape[1], "Malware", np.ones(temp.shape[0]))
         else:
-            data2.insert(data2.shape[1], "Malware", np.zeros(data2.shape[0]))
+            temp.insert(temp.shape[1], "Malware", np.zeros(temp.shape[0]))
 
-        print(data2.head())  # para visualizar apenas as 5 primeiras linhas
-        print(data2.tail())  # para visualizar apenas as 5 ultimas linhas
+        #print(temp.head())  # para visualizar apenas as 5 primeiras linhas
+        #print(temp.tail())  # para visualizar apenas as 5 ultimas linhas
 
         ## Características gerais do dataset
-        print("O conjunto de dados "+file+" possui {} linhas e {} colunas".format(data2.shape[0], data2.shape[1]))
+        print("O conjunto de dados "+file+" possui {} linhas e {} colunas".format(temp.shape[0], temp.shape[1]))
 
-        data = pd.concat([data,data2.iloc[1:]])
+        data = pd.concat([data,temp.iloc[1:]])
         #data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
         #print(data.head())
         #print(data.iloc[7516:])
