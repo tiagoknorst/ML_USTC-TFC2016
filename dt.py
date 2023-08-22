@@ -49,7 +49,8 @@ print(glob.glob("Benign/*"))
 print(glob.glob("Malware/*"))
 
 for path in glob.glob("*/"):
-    for file in glob.glob(path+"*_TCP.csv"):
+    for file in glob.glob(path+"*.csv"):
+    #for file in glob.glob(path+"*_TCP.csv"):
         temp = pd.read_csv(file, #index_col=0,
                                  dtype={'Address A':str,
                                         'Port A':int,
@@ -84,6 +85,8 @@ for path in glob.glob("*/"):
         #print(data.tail())
 
 
+data = data.drop(columns=['Address A', 'Address B'])
+
 data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
 data = data.drop(columns=['index'])
 
@@ -97,9 +100,9 @@ print(data.head())
 print(data.tail())
 
 #data.AddressA=int(ipaddress.ip_address(data.AddressA))
-for i in (range(data.shape[0])):
-    data.at[i, 'AddressA'] = int(ipaddress.ip_address(data.at[i, 'AddressA'])) # converte IP para inteiro
-    data.at[i, 'AddressB'] = int(ipaddress.ip_address(data.at[i, 'AddressB'])) # converte IP para inteiro
+#for i in (range(data.shape[0])):
+    #data.at[i, 'AddressA'] = int(ipaddress.ip_address(data.at[i, 'AddressA'])) # converte IP para inteiro
+    #data.at[i, 'AddressB'] = int(ipaddress.ip_address(data.at[i, 'AddressB'])) # converte IP para inteiro
     #print("AddressA i="+str(i)+" IP="+data.at[i, 'AddressA']+" int="+str(int(ipaddress.ip_address(data.at[i, 'AddressA'])))) 
     #print("AddressB i="+str(i)+" IP="+data.at[i, 'AddressB']+" int="+str(int(ipaddress.ip_address(data.at[i, 'AddressB'])))) 
 
@@ -108,24 +111,24 @@ for i in (range(data.shape[0])):
 """A coluna *'diagnosis'* contém a classificação de cada amostra referente ao tipo de tumor, se maligno (M) ou benigno (B). Vamos avaliar como as instâncias estão distribuídas entre as classes presentes no dataset."""
 
 ## Distribuição do atributo alvo, 'diagnosis'
-plt.hist(data['Malware'])
-plt.title("Distribuição do atributo alvo - Malware")
-plt.show()
+#plt.hist(data['Malware'])
+#plt.title("Distribuição do atributo alvo - Malware")
+#plt.show()
 
 """Podemos perceber que existem mais instâncias classificadas como 'Benigno' do que como 'Maligno'. Portanto, existe um certo **desbalanceamento entre as classes**. Não vamos entrar em detalhes nesta atividade do possível impacto deste desbalanceamento no desempenho do modelo e tampouco como mitigar seus efeitos. Discutiremos esse assunto mais adiante. Por enquanto, é importante sabermos que temos mais exemplos do tipo 'Benigno' nos dados de treinamento, e portanto, é provável que qualquer modelo treinado tenha mais facilidade de acertar exemplos desta classe.
 
 Vamos avaliar a distribuição de valores dos atributos preditivos. Faremos isto tanto através da sumarização da distribuição a partir do método `describe()`, como através da visualização dos histogramas para cada atributo utilizando o método `hist()`.
 """
 
-data.drop(['Malware'],axis=1).describe()
+#data.drop(['Malware'],axis=1).describe()
 
-data.drop(['Malware'],axis=1).hist(bins=15, figsize=(20,18))
-plt.show()
+#data.drop(['Malware'],axis=1).hist(bins=15, figsize=(20,18))
+#plt.show()
 
 
-plt.figure(figsize=(15,15))
-sns.heatmap(data.corr(), annot=True, cmap="PuOr", annot_kws={"size": 9})
-plt.show()
+#plt.figure(figsize=(15,15))
+#sns.heatmap(data.corr(), annot=True, cmap="PuOr", annot_kws={"size": 9})
+#plt.show()
 
 """---
 
@@ -143,8 +146,9 @@ Para o Holdout, iremos utilizar o método `train_test_split()` da biblioteca [sc
 
 ## Separa o dataset em duas variáveis: os atributos/entradas (X) e a classe/saída (y)
 X = data.iloc[:, :-1].values  # matriz contendo os atributos
-y = data.iloc[:, 14].values  # vetor contendo a classe (0 para maligno e 1 para benigno) de cada instância
-feature_names = columns #data.feature_names  # nome de cada atributo
+y = data.iloc[:, data.shape[1]-1].values  # vetor contendo a classe (0 para maligno e 1 para benigno) de cada instância
+#feature_names = columns #data.feature_names  # nome de cada atributo
+feature_names = data.columns.tolist() #data.feature_names  # nome de cada atributo
 target_names = ["0.0", "1.0"]  # nome de cada classe
 
 
