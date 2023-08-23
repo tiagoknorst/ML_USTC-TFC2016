@@ -48,9 +48,11 @@ print(glob.glob("*/"))
 print(glob.glob("Benign/*"))
 print(glob.glob("Malware/*"))
 
+apps=[]
+
 for path in glob.glob("*/"):
-    for file in glob.glob(path+"*.csv"):
-    #for file in glob.glob(path+"*_TCP.csv"):
+    #for file in glob.glob(path+"*.csv"):
+    for file in glob.glob(path+"*_TCP.csv"):
         temp = pd.read_csv(file, #index_col=0,
                                  dtype={'Address A':str,
                                         'Port A':int,
@@ -66,26 +68,30 @@ for path in glob.glob("*/"):
                                         'Duration':float,
                                         'Bits/s A → B':float,
                                         'Bits/s B → A':float},)
-    
-        if(path[0]=='M'): # Se esta na pasta Malware
-            temp.insert(temp.shape[1], "Malware", np.ones(temp.shape[0]))
-        else:
-            temp.insert(temp.shape[1], "Malware", np.zeros(temp.shape[0]))
+        
+        appname=file
+        appname=appname.replace("Malware/", "")
+        appname=appname.replace("Benign/", "")
+        appname=appname.replace("_TCP.csv", "")
+        appname=appname.replace("_UDP.csv", "")
+        apps.append(appname)
+
+        temp.insert(temp.shape[1], "App", [appname for x in range(temp.shape[0])])
 
         #print(temp.head())  # para visualizar apenas as 5 primeiras linhas
         #print(temp.tail())  # para visualizar apenas as 5 ultimas linhas
 
         ## Características gerais do dataset
-        print("O conjunto de dados "+file+" possui {} linhas e {} colunas".format(temp.shape[0], temp.shape[1]))
+        print("O conjunto de dados "+appname+" possui {} linhas e {} colunas".format(temp.shape[0], temp.shape[1]))
 
         data = pd.concat([data,temp.iloc[1:]])
         #data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
         #print(data.head())
         #print(data.iloc[7516:])
         #print(data.tail())
+    
 
-
-data = data.drop(columns=['Address A', 'Address B'])
+print(apps)
 
 data.reset_index(inplace=True) # reinicia indexacao apos concatenar diferentes dataframes
 data = data.drop(columns=['index'])
@@ -100,9 +106,9 @@ print(data.head())
 print(data.tail())
 
 #data.AddressA=int(ipaddress.ip_address(data.AddressA))
-#for i in (range(data.shape[0])):
-    #data.at[i, 'AddressA'] = int(ipaddress.ip_address(data.at[i, 'AddressA'])) # converte IP para inteiro
-    #data.at[i, 'AddressB'] = int(ipaddress.ip_address(data.at[i, 'AddressB'])) # converte IP para inteiro
+for i in (range(data.shape[0])):
+    data.at[i, 'AddressA'] = int(ipaddress.ip_address(data.at[i, 'AddressA'])) # converte IP para inteiro
+    data.at[i, 'AddressB'] = int(ipaddress.ip_address(data.at[i, 'AddressB'])) # converte IP para inteiro
     #print("AddressA i="+str(i)+" IP="+data.at[i, 'AddressA']+" int="+str(int(ipaddress.ip_address(data.at[i, 'AddressA'])))) 
     #print("AddressB i="+str(i)+" IP="+data.at[i, 'AddressB']+" int="+str(int(ipaddress.ip_address(data.at[i, 'AddressB'])))) 
 
@@ -149,7 +155,7 @@ X = data.iloc[:, :-1].values  # matriz contendo os atributos
 y = data.iloc[:, data.shape[1]-1].values  # vetor contendo a classe (0 para maligno e 1 para benigno) de cada instância
 #feature_names = columns #data.feature_names  # nome de cada atributo
 feature_names = data.columns.tolist() #data.feature_names  # nome de cada atributo
-target_names = ["0.0", "1.0"]  # nome de cada classe
+target_names = apps  # nome de cada classe
 
 
 print(f"Dimensões de X: {X.shape}\n")
@@ -162,14 +168,6 @@ print(f"Nomes das classes: {target_names}")
 ### Quantidade de Exemplos de cada Classe
 É possível também contar quantos exemplos pertencem à classe dos tumores malignos e quantos à classe dos benignos
 """
-
-import numpy as np
-
-n_malign = np.sum(y == 0)
-n_benign = np.sum(y == 1)
-
-print("Número de exemplos malignos: %d" % n_malign)
-print("Número de exemplos benignos: %d" % n_benign)
 
 """## Variância nas Árvores de Decisão
 
@@ -299,12 +297,12 @@ As árvores de decisão treinadas nos itens anteriores não possuíam nenhuma fo
 Podemos especificar a profundidade máxima da árvore utilizando o parâmetro max_depth.
 """
 
-dt = DecisionTreeClassifier(max_depth=2)
+dt = DecisionTreeClassifier(max_depth=3)
 dt.fit(X, y)
 
 import matplotlib.pyplot as plt
 from sklearn.tree import plot_tree
-plt.figure(figsize=(12,6))
+plt.figure(figsize=(24,12))
 _ = plot_tree(dt, feature_names=feature_names, class_names=target_names)
 
 """O código abaixo gera árvores de decisão com diferentes profundidades máximas e as avalia em termos de acurácia.
